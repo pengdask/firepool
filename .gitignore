@@ -1,0 +1,12 @@
+node_modules/
+.env*
+*.log
+*.tsv
+*.csv
+*.pem
+credentials*
+state.json
+config.json
+exports/
+coverage/
+.DS_Store
