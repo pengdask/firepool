@@ -1,6 +1,6 @@
 {
-  "name": "firepool", "version": "0.1.0", "private": true,
-  "description": "Local Firecrawl account pool management for AI assistants",
+  "name": "firepool", "version": "0.2.0", "private": true,
+  "description": "Local account pool management with agent-led setup",
   "type": "module", "license": "MIT", "engines": {"node": ">=22"},
   "bin": {"firepool": "scripts/firepool.mjs"},
   "scripts": {"test": "node --test", "scan": "node scripts/scan-secrets.mjs", "check": "npm test && npm run scan"}

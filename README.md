@@ -10,15 +10,18 @@
 帮我安装并使用这个 Skill：https://github.com/pengdask/firepool
 ```
 
-然后把你的一个或多个 **API Key** 交给 Agent，它会引导你完成配置。之后直接说：
+Agent 会先检查已有安装和 Key，复用已有账号，新 Key 合并去重，不覆盖旧配置。
+
+然后把你的一个或多个 **API Key** 直接发给 Agent，它会自动完成配置；也可以让它打开本机输入页。之后直接说：
 
 ```text
-用 firepool 管理我的 API 账号，帮我抓取这个网页：<网页地址>
+帮我抓取这个网页：<网页地址>
+查一下我的 Key 情况
 ```
 
-安装、环境检查、Key 导入和工具接入都交给 Agent，无需自己执行命令。firepool 管理账号池，抓取由你已有的工具完成；缺少工具时，Agent 会继续引导配置。
+支持 Codex、Claude Code、WorkBuddy 等具备 Skill 和脚本执行能力的 Agent。无需了解底层服务，也无需提前安装插件；环境检查、Key 导入和调用工具由 Agent 准备。客户端若要求确认导入，Agent 会给出那一步操作。
 
-Key 只保存在你的本机，不会提交到本仓库。
+firepool 将 Key 保存在你的本机，不会提交到本仓库。
 
 ---
 

@@ -10,15 +10,18 @@ Let your agent manage your API account pool: select an available account, check 
 Install and use this Skill: https://github.com/pengdask/firepool
 ```
 
-Then give your agent one or more **API keys**. It will guide you through setup. After that, just ask:
+The agent checks existing installations and accounts first, reuses your pool and merges new keys without overwriting old settings.
+
+Paste one or more **API keys** directly to your agent. It handles setup; a local input page is also available if preferred. After that, just ask:
 
 ```text
-Use firepool to manage my API accounts and scrape this page: <URL>
+Scrape this page: <URL>
+Check my keys and credits
 ```
 
-Let the agent handle installation, environment checks, key import and tool integration. No manual commands needed. firepool manages accounts; your existing tool performs the actual request. If a tool is missing, the agent will guide you through connecting one.
+Works with Skill-capable agents that can execute local scripts, including Codex, Claude Code and WorkBuddy. No prior plugin or service knowledge needed: the agent prepares the runtime, accounts and calling tool. If the client requires an import confirmation, the agent gives that specific next step.
 
-Keys stay on your machine and are never committed to this repository.
+firepool stores keys on your machine and never commits them to this repository.
 
 ---
 

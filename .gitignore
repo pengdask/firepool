@@ -10,3 +10,7 @@ config.json
 exports/
 coverage/
 .DS_Store
+
+*.zip
+*.skill
+.firepool-install.json

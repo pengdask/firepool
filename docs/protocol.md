@@ -8,6 +8,9 @@ Use `node /absolute/path/to/firepool/scripts/firepool.mjs --help` for syntax. Al
 
 | Command | Behavior / 行为 |
 | --- | --- |
+| `setup [--stdin / --file PATH]` | Import, provision private CLI, verify balances; redacted summary / 导入、准备工具、验证余额，仅输出摘要 |
+| `prepare` | Provision official CLI only / 仅准备调用工具 |
+| `run --stdin` | JSON command envelope, local credentials / JSON 调用，本机交接凭证 |
 | `add [--id NAME] [--priority N]` | Hidden prompt or stdin; default priority 100. 隐藏输入或标准输入；优先级默认为 100，数字越小越优先。 |
 | `import --stdin` / `import --file PATH` | Import all rows atomically; same key deduplicated, conflicting IDs rejected. 整批校验后导入，同 Key 去重，标识冲突报错。 |
 | `list` | Redacted status, no network. 脱敏状态，不联网。 |
@@ -59,4 +62,4 @@ CLI never logs credentials, but acquire/report must hand them to the caller. An 
 
 CLI 不记录凭证，但领取和重试时必须交给调用者。AI 宿主可能保存工具输出及 API 参数；无法隐藏时，应在可信本地适配器内使用 Pool 类，只向助手返回脱敏结果。firepool 无法控制第三方宿主的记录。用户已交给 Agent 的凭证应直接在本机处理且不回显，勿放入命令行参数、问题报告或截图；导入源文件由用户保护并在导入后自行清理。
 
-Official quota contract / 官方余额接口：[Firecrawl credit usage](https://docs.firecrawl.dev/api-reference/endpoint/credit-usage). Only GET to the fixed official v2 endpoint is used; redirects are refused. There is no custom API origin setting and no scrape/search request here.
+Official quota contract / 官方余额接口：[Firecrawl credit usage](https://docs.firecrawl.dev/api-reference/endpoint/credit-usage). Only GET to the fixed official v2 endpoint is used; redirects are refused. There is no custom API origin setting. Pool management itself only queries credit usage; the optional local adapter delegates user-requested scrape/search/map operations to the separately installed official CLI.
