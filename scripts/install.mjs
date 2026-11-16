@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { createHash, randomUUID } from 'node:crypto';
-import { pathToFileURL } from 'node:url';
+import { isMain } from '../lib/main.mjs';
 import { ROOT } from '../lib/store.mjs';
 
 const FILES = ['SKILL.md', 'AGENTS.md', 'README.md', 'README.en.md', 'README.zh-CN.md', 'LICENSE', 'SECURITY.md', 'package.json', 'package-lock.json', 'scripts', 'lib', 'docs'];
@@ -59,7 +59,7 @@ export async function installSkill({ target, agent, source = ROOT, home, env } =
   } finally { await fs.rm(stage, { recursive: true, force: true }); }
   return { ok: true, installed: true, changed: true, target };
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(await fs.realpath(process.argv[1])).href) {
+if (await isMain(import.meta.url)) {
   const args = process.argv.slice(2), options = {};
   for (let i = 0; i < args.length; i += 2) {
     if (!['--agent', '--target'].includes(args[i]) || !args[i + 1] || options[args[i].slice(2)]) { process.stderr.write('{"ok":false,"error":"invalid_arguments"}\n'); process.exit(1); }

@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 import http from 'node:http';
-import fs from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { Pool } from '../lib/pool.mjs';
 import { onboard } from '../lib/onboard.mjs';
-import { pathToFileURL } from 'node:url';
+import { isMain } from '../lib/main.mjs';
 
 export async function startConfiguration({ pool = new Pool({ home: process.env.FIREPOOL_HOME }), setup = onboard, ttl = 600_000 } = {}) {
   const token = randomBytes(32).toString('hex'), nonce = randomBytes(24).toString('base64');
@@ -43,7 +42,7 @@ export async function startConfiguration({ pool = new Pool({ home: process.env.F
   origin = `http://127.0.0.1:${server.address().port}`;
   return { url: `${origin}/#${token}`, close, server };
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(await fs.realpath(process.argv[1])).href) {
+if (await isMain(import.meta.url)) {
   startConfiguration().then(({ url }) => {
     process.stdout.write(`${JSON.stringify({ event: 'local_key_form', url, expiresInSeconds: 600 })}\n`);
     if (process.argv.includes('--open')) {

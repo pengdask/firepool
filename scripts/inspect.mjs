@@ -2,7 +2,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { pathToFileURL } from 'node:url';
+import { isMain } from '../lib/main.mjs';
 import { ROOT, defaultHome } from '../lib/store.mjs';
 import { Pool } from '../lib/pool.mjs';
 
@@ -24,7 +24,7 @@ export async function inspect({ home = os.homedir(), env = process.env, dataHome
   } catch (e) { if (e.code !== 'ENOENT') throw Error('existing_pool_unreadable'); }
   return { ok: true, installations, configured, accounts, environmentKeyPresent: Boolean(env.FIRECRAWL_API_KEY), next: configured && accounts.length ? 'reuse_pool_merge_new_keys' : 'setup' };
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(await fs.realpath(process.argv[1])).href) {
+if (await isMain(import.meta.url)) {
   inspect().then(result => process.stdout.write(`${JSON.stringify(result)}\n`)).catch(e => {
     process.stderr.write(`${JSON.stringify({ ok: false, error: e.message === 'existing_pool_unreadable' ? e.message : 'inspection_failed' })}\n`); process.exitCode = 1;
   });
