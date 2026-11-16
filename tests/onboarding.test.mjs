@@ -233,3 +233,14 @@ test('CLI merges an existing environment key without output or changing the orig
   const repeated = await promisify(execFile)(process.execPath, ['--import', pathToFileURL(preload).href, path.join(ROOT, 'scripts', 'firepool.mjs'), 'setup', '--environment'], { env: environment });
   assert.equal(JSON.parse(repeated.stdout).duplicate, 1);
 });
+
+test('mixed setup reports submitted invalid keys separately from the healthy existing pool', async t => {
+  const { pool } = await fixture(t);
+  await onboard(pool, 'MOCK_HEALTHY_EXISTING', async () => {});
+  pool.query = async () => ({ status: 401 });
+  const result = await onboard(pool, 'MOCK_BAD_SUBMISSION', async () => {});
+  assert.equal(result.ok, true); assert.equal(result.available, 1);
+  assert.equal(result.submission.total, 1); assert.equal(result.submission.available, 0);
+  assert.equal(result.submission.issues[0].status, 'invalid');
+  assert.ok(!JSON.stringify(result).includes('MOCK_'));
+});

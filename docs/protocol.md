@@ -21,7 +21,7 @@ Use `node /absolute/path/to/firepool/scripts/firepool.mjs --help` for syntax. Al
 
 `setup --environment` reads only FIRECRAWL_API_KEY in the local process; it never prints the value or changes the original environment. setup preserves disabled/invalid accounts and cooldowns, reuses the 15-minute balance cache and returns counts across the entire pool. `imported` and `duplicate` describe this input; `available` describes verified healthy accounts in the pool, not necessarily newly submitted keys. Missing keys return keys_required without installing the calling tool.
 
-setup --environment 只在本地进程内读取已有环境凭证。setup 不自动恢复停用/失效账号，不清除冷却，复用余额缓存；imported/duplicate 指本次输入，available 指全池已验证可用数量。未提供 Key 且池为空时不安装调用工具。账号状态含义及维护见 [维护与恢复](maintenance.md)。
+setup --environment 只在本地进程内读取已有环境凭证。setup 不自动恢复停用/失效账号，不清除冷却，复用余额缓存；imported/duplicate 指本次输入，available 指全池已验证可用数量。submission 表示本次提交的唯一账号，issues 只列其未就绪标识与状态；可以据此区分新提交的问题和全池可用性。未提供 Key 且池为空时不安装调用工具。账号状态含义及维护见 [维护与恢复](maintenance.md)。
 
 `report` can also accept `--retry-after SECONDS_OR_HTTP_DATE` for throttling. Both acquire and report may disclose a credential; all other commands are redacted. An unavailable pool returns `{ok:false,error:"pool_unavailable",retryNotBefore:TIMESTAMP_OR_NULL}`. Successful completion returns `{ok:true,done:true}`. Timestamps are Unix milliseconds. A null retry time means no automatic recovery time is known; fix configuration/credentials before starting a new operation.
 
