@@ -21,7 +21,7 @@ test('directly pasted keys complete setup without another input channel or exist
   assert.equal(result.ok, true); assert.equal(result.available, 2); assert.equal(prepared, 1);
   assert.ok(!JSON.stringify(result).includes('MOCK_'));
   const again = await onboard(pool, 'MOCK_PASTED_ONE', async () => {});
-  assert.equal(again.imported, 0); assert.equal(again.available, 1);
+  assert.equal(again.imported, 0); assert.equal(again.available, 2); assert.equal(again.duplicate, 1);
 });
 
 test('installation failure preserves keys and gives a concrete resumable step', async t => {
@@ -122,6 +122,7 @@ test('setup never announces cached positive balances as usable during provider c
   const { pool } = await fixture(t);
   await onboard(pool, 'MOCK_LIMITED', async () => {});
   pool.query = async () => ({ status: 429, retryAfter: '120' });
+  await pool.refresh();
   const result = await onboard(pool, undefined, async () => {});
   assert.equal(result.ok, false); assert.equal(result.available, 0); assert.equal(result.coolingDown, 1);
   assert.equal((await pool.acquire()).error, 'pool_unavailable');
@@ -168,4 +169,66 @@ test('installer CLI executes from temporary and aliased download paths', async t
   await fs.access(path.join(target, 'scripts', 'firepool.mjs'));
   const inspected = await run(process.execPath, [path.join(input, 'scripts', 'inspect.mjs')], { env: { ...process.env, FIREPOOL_HOME: path.join(dir, 'empty') } });
   assert.equal(JSON.parse(inspected.stdout).configured, false);
+});
+
+test('setup reuses cached pool, merges new keys and never revives disabled or invalid accounts', async t => {
+  const { pool } = await fixture(t); let calls = 0;
+  pool.query = async () => { calls++; return { status: 200, remaining: 20 }; };
+  await onboard(pool, 'MOCK_OLD', async () => {});
+  await onboard(pool, 'MOCK_OLD', async () => {});
+  assert.equal(calls, 1);
+  const merged = await onboard(pool, 'MOCK_NEW', async () => {});
+  assert.equal(merged.available, 2); assert.equal(merged.total, 2); assert.equal(calls, 2);
+  const receipt = await pool.acquire();
+  await pool.report(receipt.round, receipt.id, 'invalid');
+  const remaining = (await pool.status()).accounts.find(a => a.id !== receipt.id);
+  await pool.manage('disable', remaining.id);
+  const blocked = await onboard(pool, 'MOCK_OLD\nMOCK_NEW', async () => {});
+  assert.equal(blocked.ok, false); assert.equal(blocked.invalid, 1); assert.equal(blocked.disabled, 1); assert.equal(calls, 2);
+});
+
+test('setup without credentials gives one next step and does not install a tool', async t => {
+  const { pool } = await fixture(t); let prepared = false;
+  const result = await onboard(pool, undefined, async () => { prepared = true; });
+  assert.equal(result.next, 'provide_keys'); assert.equal(result.configured, false); assert.equal(prepared, false);
+});
+
+test('verified installer upgrades clean prior versions while preserving extra files and edits', async t => {
+  const { dir } = await fixture(t);
+  const { ROOT } = await import('../lib/store.mjs');
+  const source = path.join(dir, 'source');
+  await fs.cp(ROOT, source, { recursive: true, filter: name => !name.includes(`${path.sep}.git`) });
+  const target = path.join(dir, 'installed');
+  await installSkill({ source, target });
+  await fs.appendFile(path.join(source, 'SKILL.md'), '\nUpdated upstream instructions.\n');
+  const updated = await installSkill({ source, target });
+  assert.equal(updated.upgraded, true);
+  assert.match(await fs.readFile(path.join(target, 'SKILL.md'), 'utf8'), /Updated upstream/);
+  assert.equal((await installSkill({ source, target })).changed, false);
+  await fs.writeFile(path.join(target, 'my-notes.txt'), 'Keep my configuration');
+  await assert.rejects(installSkill({ source, target }), /existing_installation_conflict/);
+  assert.equal(await fs.readFile(path.join(target, 'my-notes.txt'), 'utf8'), 'Keep my configuration');
+  await fs.writeFile(`${target}.install.lock`, '');
+  await assert.rejects(installSkill({ source, target }), /installation_in_progress/);
+});
+
+test('CLI merges an existing environment key without output or changing the original environment', async t => {
+  const { dir, pool } = await fixture(t);
+  const { execFile } = await import('node:child_process');
+  const { promisify } = await import('node:util');
+  const { ROOT } = await import('../lib/store.mjs');
+  const packageDir = path.join(pool.home, 'tools', 'node_modules', 'firecrawl-cli');
+  await fs.mkdir(path.join(packageDir, 'dist'), { recursive: true });
+  await fs.writeFile(path.join(packageDir, 'package.json'), JSON.stringify({ version: TOOL_VERSION }));
+  await fs.writeFile(path.join(packageDir, 'dist', 'launcher.js'), '// MOCK tool, no network\n');
+  const preload = path.join(dir, 'mock-network.mjs');
+  await fs.writeFile(preload, 'globalThis.fetch = async () => new Response(JSON.stringify({success:true,data:{remainingCredits:12}}), {status:200});');
+  const environment = { ...process.env, FIREPOOL_HOME: pool.home, FIRECRAWL_API_KEY: 'MOCK_EXISTING_ENVIRONMENT_KEY' };
+  const result = await promisify(execFile)(process.execPath, ['--import', preload, path.join(ROOT, 'scripts', 'firepool.mjs'), 'setup', '--environment'], { env: environment });
+  const summary = JSON.parse(result.stdout);
+  assert.equal(summary.imported, 1); assert.equal(summary.available, 1);
+  assert.equal(environment.FIRECRAWL_API_KEY, 'MOCK_EXISTING_ENVIRONMENT_KEY');
+  assert.ok(!result.stdout.includes('MOCK_')); assert.ok(!result.stderr.includes('MOCK_'));
+  const repeated = await promisify(execFile)(process.execPath, ['--import', preload, path.join(ROOT, 'scripts', 'firepool.mjs'), 'setup', '--environment'], { env: environment });
+  assert.equal(JSON.parse(repeated.stdout).duplicate, 1);
 });

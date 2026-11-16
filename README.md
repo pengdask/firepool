@@ -1,30 +1,32 @@
 # firepool
 
-让 Agent 管理你的 API 账号池，自动选择可用账号、检查余额、在账号不可用时切换。切换由脚本完成，减少 Agent 的推理开销。
+把网页采集 Key 交给 Agent，统一管理、查余额，账号不可用时由脚本选择下一个。
 
 ## 快速上手
 
-**把下面这句话发给你的 Agent：**
+把这句话发给你的 Agent：
 
 ```text
 帮我安装并使用这个 Skill：https://github.com/pengdask/firepool
 ```
 
-Agent 会先检查已有安装和 Key，复用已有账号，新 Key 合并去重，不覆盖旧配置。
+Agent 会先检查已有安装和账号。已有 Key 直接复用；新 Key 可以直接粘贴给 Agent，自动合并去重，保留旧配置。也可选择本机输入页。
 
-然后把你的一个或多个 **API Key** 直接发给 Agent，它会自动完成配置；也可以让它打开本机输入页。之后直接说：
+准备好后，直接说：
 
 ```text
 帮我抓取这个网页：<网页地址>
 查一下我的 Key 情况
+查一下最新余额
+再加上这几个 Key
 ```
 
-支持 Codex、Claude Code、WorkBuddy 等具备 Skill 和脚本执行能力的 Agent。无需了解底层服务，也无需提前安装插件；环境检查、Key 导入和调用工具由 Agent 准备。客户端若要求确认导入，Agent 会给出那一步操作。
+无需提前安装插件或了解底层工具。支持具备本地脚本执行能力的 Codex、Claude Code、WorkBuddy 等 Agent；客户端若需要确认导入，Agent 会准备好文件并告诉你剩下的那一步。
 
-firepool 将 Key 保存在你的本机，不会提交到本仓库。
+Key 保存在本机用户目录，不进入本仓库；直接粘贴的内容仍受所用 Agent 的聊天记录策略约束。已有工具和账号配置会保留。
 
 ---
 
-**给 Agent：** 收到此仓库地址并被要求安装或使用时，读取 [Skill](SKILL.md) 和 [安装与首次使用指南](docs/agent-setup.md)，直接完成安装并引导用户配置；不要把安装命令清单交回给用户。
+**给 Agent：** 先读 [SKILL.md](SKILL.md)，按用户意图完成接入或使用。面向用户只交付结果和必要的下一步。
 
-[English](README.en.md) · [接入协议](docs/protocol.md) · [安全说明](SECURITY.md) · [MIT](LICENSE)
+[English](README.en.md) · [使用与恢复](docs/maintenance.md) · [安全说明](SECURITY.md) · [MIT](LICENSE)

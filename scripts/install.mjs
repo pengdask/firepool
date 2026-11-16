@@ -38,26 +38,44 @@ export async function installSkill({ target, agent, source = ROOT, home, env } =
   }
   const hashes = {};
   for (const file of entries) hashes[file] = createHash('sha256').update(await fs.readFile(path.join(source, file))).digest('hex');
-  try {
-    const stat = await fs.lstat(target);
-    if (!stat.isDirectory() || stat.isSymbolicLink()) throw Error('existing_installation_conflict');
-    const previous = JSON.parse(await fs.readFile(path.join(target, '.firepool-install.json'), 'utf8'));
-    const existing = (await files(target)).filter(f => f !== '.firepool-install.json');
-    if (existing.length !== entries.length || existing.some(f => !hashes[f] || previous[f] !== hashes[f])) throw Error('existing_installation_conflict');
-    for (const file of existing) if (createHash('sha256').update(await fs.readFile(path.join(target, file))).digest('hex') !== hashes[file]) throw Error('existing_installation_conflict');
-    return { ok: true, installed: true, changed: false, target };
-  } catch (e) { if (e.code !== 'ENOENT') throw Error('existing_installation_conflict'); }
-  // Existing targets without a manifest must never be overwritten.
-  try { await fs.lstat(target); throw Error('existing_installation_conflict'); } catch (e) { if (e.code !== 'ENOENT') throw e; }
   await fs.mkdir(path.dirname(target), { recursive: true });
-  const stage = `${target}.install-${randomUUID()}`;
+  const lockPath = `${target}.install.lock`;
+  let lock;
+  try { lock = await fs.open(lockPath, 'wx', 0o600); } catch (e) { if (e.code === 'EEXIST') throw Error('installation_in_progress'); throw e; }
+  const stage = `${target}.install-${randomUUID()}`, backup = `${target}.previous-${randomUUID()}`;
+  let upgrading = false, backedUp = false;
   try {
+    let exists = false;
+    try { await fs.lstat(target); exists = true; } catch (e) { if (e.code !== 'ENOENT') throw e; }
+    if (exists) {
+      try {
+        const stat = await fs.lstat(target);
+        if (!stat.isDirectory() || stat.isSymbolicLink()) throw Error();
+        const previous = JSON.parse(await fs.readFile(path.join(target, '.firepool-install.json'), 'utf8'));
+        const existing = (await files(target)).filter(f => f !== '.firepool-install.json');
+        if (!previous || Array.isArray(previous) || existing.length !== Object.keys(previous).length) throw Error();
+        for (const file of existing) {
+          if (!Object.hasOwn(previous, file) || createHash('sha256').update(await fs.readFile(path.join(target, file))).digest('hex') !== previous[file]) throw Error();
+        }
+        const identity = JSON.parse(await fs.readFile(path.join(target, 'package.json'), 'utf8'));
+        if (identity.name !== 'firepool') throw Error();
+        if (existing.length === entries.length && existing.every(f => previous[f] === hashes[f])) return { ok: true, installed: true, changed: false, target };
+        upgrading = true;
+      } catch { throw Error('existing_installation_conflict'); }
+    }
     await fs.mkdir(stage);
     for (const file of entries) { await fs.mkdir(path.dirname(path.join(stage, file)), { recursive: true }); await fs.copyFile(path.join(source, file), path.join(stage, file)); }
     await fs.writeFile(path.join(stage, '.firepool-install.json'), JSON.stringify(hashes));
-    await fs.rename(stage, target);
-  } finally { await fs.rm(stage, { recursive: true, force: true }); }
-  return { ok: true, installed: true, changed: true, target };
+    if (upgrading) { await fs.rename(target, backup); backedUp = true; }
+    try { await fs.rename(stage, target); }
+    catch (e) { if (backedUp) { await fs.rename(backup, target); backedUp = false; } throw e; }
+    if (backedUp) { await fs.rm(backup, { recursive: true }); backedUp = false; }
+    return { ok: true, installed: true, changed: true, upgraded: upgrading, target };
+  } finally {
+    await fs.rm(stage, { recursive: true, force: true });
+    await lock.close(); await fs.rm(lockPath, { force: true });
+  }
+
 }
 if (await isMain(import.meta.url)) {
   const args = process.argv.slice(2), options = {};
@@ -66,7 +84,7 @@ if (await isMain(import.meta.url)) {
     options[args[i].slice(2)] = args[i + 1];
   }
   installSkill(options).then(result => process.stdout.write(`${JSON.stringify(result)}\n`)).catch(e => {
-    const known = new Set(['workbuddy_target_or_package_import_required', 'agent_target_required', 'invalid_install_target', 'existing_installation_conflict', 'unsafe_install_source']);
+    const known = new Set(['workbuddy_target_or_package_import_required', 'agent_target_required', 'invalid_install_target', 'existing_installation_conflict', 'unsafe_install_source', 'installation_in_progress']);
     process.stderr.write(`${JSON.stringify({ ok: false, error: known.has(e.message) ? e.message : 'installation_failed' })}\n`); process.exitCode = 1;
   });
 }

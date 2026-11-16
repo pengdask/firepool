@@ -1,30 +1,32 @@
 # firepool
 
-Let your agent manage your API account pool: select an available account, check credits, and switch when an account becomes unavailable. Scripts handle switching to reduce agent reasoning overhead.
+Let your agent manage web collection keys, check credits and select the next account when one becomes unavailable.
 
 ## Quick start
 
-**Send this to your agent:**
+Send your agent:
 
 ```text
 Install and use this Skill: https://github.com/pengdask/firepool
 ```
 
-The agent checks existing installations and accounts first, reuses your pool and merges new keys without overwriting old settings.
+The agent checks existing installations and accounts first. Existing keys are reused; directly pasted new keys are merged and deduplicated while preserving old settings. A local input page is optional.
 
-Paste one or more **API keys** directly to your agent. It handles setup; a local input page is also available if preferred. After that, just ask:
+Then ask:
 
 ```text
 Scrape this page: <URL>
-Check my keys and credits
+Check my keys
+Check the latest credits
+Add these keys
 ```
 
-Works with Skill-capable agents that can execute local scripts, including Codex, Claude Code and WorkBuddy. No prior plugin or service knowledge needed: the agent prepares the runtime, accounts and calling tool. If the client requires an import confirmation, the agent gives that specific next step.
+No plugin setup or knowledge of the underlying tools needed. Works with agents that can run local scripts, including Codex, Claude Code and WorkBuddy. If the client requires an import confirmation, the agent prepares the file and gives that specific next step.
 
-firepool stores keys on your machine and never commits them to this repository.
+Keys are stored in your local user directory and kept out of this repository. Pasted keys remain subject to your agent's chat retention policies. Existing tool and account settings are preserved.
 
 ---
 
-**For agents:** When asked to install or use this repository, read [SKILL.md](SKILL.md) and the [onboarding guide](docs/agent-setup.md), complete setup and guide the user. Execute the setup rather than returning a list of installation commands.
+**For agents:** Read [SKILL.md](SKILL.md) and follow the user's intent. Complete setup or usage; return the result and only the next action actually needed.
 
-[中文首页](README.md) · [Integration protocol](docs/protocol.md) · [Security](SECURITY.md) · [MIT](LICENSE)
+[中文](README.md) · [Maintenance](docs/maintenance.md) · [Security](SECURITY.md) · [MIT](LICENSE)

@@ -8,7 +8,7 @@ import { Pool } from '../lib/pool.mjs';
 
 // Inspect known locations only. Never dump credentials or search the user's disk.
 export async function inspect({ home = os.homedir(), env = process.env, dataHome = env.FIREPOOL_HOME || defaultHome() } = {}) {
-  const candidates = [...new Set([ROOT, path.join(env.CODEX_HOME || path.join(home, '.codex'), 'skills', 'firepool'), path.join(home, '.claude', 'skills', 'firepool'), path.join(home, '.agents', 'skills', 'firepool')])];
+  const candidates = [...new Set([path.join(env.CODEX_HOME || path.join(home, '.codex'), 'skills', 'firepool'), path.join(home, '.claude', 'skills', 'firepool'), path.join(home, '.agents', 'skills', 'firepool')])];
   const installations = [];
   for (const dir of candidates) {
     try {
@@ -16,13 +16,14 @@ export async function inspect({ home = os.homedir(), env = process.env, dataHome
       if (/^name:\s*firepool\s*$/m.test(text)) installations.push(dir);
     } catch (e) { if (!['ENOENT', 'ENOTDIR'].includes(e.code)) throw Error('inspection_failed'); }
   }
-  let accounts = [], configured = false;
+  let accounts = [], summary = { total: 0 }, configured = false;
   try {
     await fs.access(path.join(dataHome, 'credentials.json'));
-    accounts = (await new Pool({ home: dataHome }).status()).accounts;
+    const status = await new Pool({ home: dataHome }).status();
+    accounts = status.accounts; summary = status.summary;
     configured = true;
   } catch (e) { if (e.code !== 'ENOENT') throw Error('existing_pool_unreadable'); }
-  return { ok: true, installations, configured, accounts, environmentKeyPresent: Boolean(env.FIRECRAWL_API_KEY), next: configured && accounts.length ? 'reuse_pool_merge_new_keys' : 'setup' };
+  return { ok: true, installations, configured, summary, accounts, environmentKeyPresent: Boolean(env.FIRECRAWL_API_KEY), next: configured && accounts.length ? 'reuse_pool_merge_new_keys' : 'setup' };
 }
 if (await isMain(import.meta.url)) {
   inspect().then(result => process.stdout.write(`${JSON.stringify(result)}\n`)).catch(e => {

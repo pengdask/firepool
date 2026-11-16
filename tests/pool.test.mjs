@@ -190,3 +190,21 @@ test('agent bulk stdin onboarding imports without temporary files or credential 
   assert.equal(duplicate.code, 1);
   assert.deepEqual((await fs.readdir(dir)).sort(), ['credentials.json']);
 });
+
+test('offline account summary distinguishes unverified, unknown, stale, disabled and ready', async t => {
+  const { pool, advance, calls } = await fixture(t);
+  await pool.import(rows());
+  const initial = await pool.status();
+  assert.equal(initial.summary.unverified, 2); assert.equal(initial.summary.available, 0); assert.equal(calls(), 0);
+  const receipt = await pool.acquire(); await pool.report(receipt.round, receipt.id, 'success');
+  assert.equal((await pool.status()).summary.available, 1);
+  advance(15 * 60_000);
+  assert.equal((await pool.status()).summary.stale, 1);
+  pool.query = async () => { throw Error('MOCK_OFFLINE'); };
+  await pool.refresh();
+  assert.equal((await pool.status()).summary.unknown, 2);
+  await pool.manage('disable', 'first');
+  const status = await pool.status();
+  assert.equal(status.summary.disabled, 1); assert.equal(status.summary.unknown, 1);
+  assert.ok(!JSON.stringify(status).includes('MOCK_'));
+});

@@ -7,7 +7,7 @@ import { onboard } from '../lib/onboard.mjs';
 import { prepareTool, runTool } from '../lib/tool.mjs';
 
 const help = `firepool (Node.js 22+) — local account pool; JSON output
-  setup [--stdin | --file PATH]  Import, prepare official tool and verify (no paid task)
+  setup [--stdin | --file PATH | --environment]  Import, prepare official tool and verify (no paid task)
   prepare                       Prepare private local official tool
   run --stdin                   Execute tool with pooled key privately; JSON request
   add [--id NAME] [--priority N]  Read one key from hidden prompt / stdin
@@ -43,15 +43,16 @@ async function main() {
   const [command, ...args] = process.argv.slice(2);
   if (!command || command === '--help' || command === 'help') { process.stdout.write(help); return; }
   const allowed = {
-    setup: ['stdin', 'file'], prepare: [], run: ['stdin'], add: ['id', 'priority'], import: ['file', 'stdin'], list: [], enable: ['id'], disable: ['id'], remove: ['id'], refresh: ['id'], acquire: [], report: ['round', 'id', 'outcome', 'retry-after'],
+    setup: ['stdin', 'file', 'environment'], prepare: [], run: ['stdin'], add: ['id', 'priority'], import: ['file', 'stdin'], list: [], enable: ['id'], disable: ['id'], remove: ['id'], refresh: ['id'], acquire: [], report: ['round', 'id', 'outcome', 'retry-after'],
   };
   if (!Object.hasOwn(allowed, command)) throw Error('unknown_command');
   const options = {};
   for (let i = 0; i < args.length;) {
     const flag = args[i];
-    if (['import', 'setup', 'run'].includes(command) && flag === '--stdin') {
-      if (options.stdin !== undefined) throw Error('invalid_arguments');
-      options.stdin = true; i++; continue;
+    if ((['import', 'setup', 'run'].includes(command) && flag === '--stdin') || (command === 'setup' && flag === '--environment')) {
+      const name = flag.slice(2);
+      if (options[name] !== undefined) throw Error('invalid_arguments');
+      options[name] = true; i++; continue;
     }
     if (!flag?.startsWith('--') || !allowed[command].includes(flag.slice(2)) || options[flag.slice(2)] !== undefined || args[i + 1] === undefined) throw Error('invalid_arguments');
     options[flag.slice(2)] = args[i + 1];
@@ -60,9 +61,12 @@ async function main() {
   const pool = new Pool({ home: process.env.FIREPOOL_HOME });
   let result;
   if (command === 'setup') {
-    if (options.stdin && options.file) throw Error('invalid_arguments');
+    if ([options.stdin, options.file, options.environment].filter(Boolean).length > 1) throw Error('invalid_arguments');
     let raw;
-    if (options.stdin) {
+    if (options.environment) {
+      raw = process.env.FIRECRAWL_API_KEY;
+      if (!raw?.trim()) throw Error('environment_key_missing');
+    } else if (options.stdin) {
       if (process.stdin.isTTY) throw Error('stdin_pipe_required');
       raw = await readStdin(10 * 1024 * 1024);
     } else if (options.file) {
@@ -97,7 +101,7 @@ async function main() {
   process.stdout.write(`${JSON.stringify(result)}\n`);
   if (!result.ok) process.exitCode = 2;
 }
-const errors = new Set(['npm_not_found', 'tool_install_failed', 'tool_verification_failed', 'tool_not_ready', 'invalid_tool_request', 'unsafe_tool_retry', 'stdin_pipe_required', 'input_too_large', 'unknown_command', 'invalid_arguments', 'missing_file', 'invalid_import_file', 'invalid_import', 'import_conflict', 'invalid_id', 'unknown_account', 'invalid_outcome', 'invalid_retry_after', 'invalid_receipt', 'too_many_rounds', 'invalid_storage', 'unsafe_storage', 'storage_unavailable', 'storage_inside_repository', 'lock_timeout', 'lock_unavailable']);
+const errors = new Set(['environment_key_missing', 'npm_not_found', 'tool_install_failed', 'tool_verification_failed', 'tool_not_ready', 'invalid_tool_request', 'unsafe_tool_retry', 'stdin_pipe_required', 'input_too_large', 'unknown_command', 'invalid_arguments', 'missing_file', 'invalid_import_file', 'invalid_import', 'import_conflict', 'invalid_id', 'unknown_account', 'invalid_outcome', 'invalid_retry_after', 'invalid_receipt', 'too_many_rounds', 'invalid_storage', 'unsafe_storage', 'storage_unavailable', 'storage_inside_repository', 'lock_timeout', 'lock_unavailable']);
 main().catch(error => {
   // Never print raw exceptions, argv, imports, server bodies or response headers.
   process.stderr.write(`${JSON.stringify({ ok: false, error: errors.has(error.message) ? error.message : 'operation_failed' })}\n`);
