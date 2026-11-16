@@ -147,3 +147,25 @@ test('inspection reuses existing pool without network or revealing keys; repeate
   await assert.rejects(inspect({ home: dir, env: {}, dataHome: pool.home }), /existing_pool_unreadable/);
   assert.equal(await fs.readFile(path.join(pool.home, 'credentials.json'), 'utf8'), original);
 });
+
+test('installer CLI executes from temporary and aliased download paths', async t => {
+  const { dir } = await fixture(t);
+  const { execFile } = await import('node:child_process');
+  const { promisify } = await import('node:util');
+  const { fileURLToPath } = await import('node:url');
+  const run = promisify(execFile);
+  const source = fileURLToPath(new URL('../', import.meta.url));
+  const downloaded = path.join(dir, 'download');
+  await fs.cp(source, downloaded, { recursive: true, filter: name => !name.includes(`${path.sep}.git`) });
+  let input = downloaded;
+  if (process.platform !== 'win32') {
+    input = path.join(dir, 'download-alias');
+    await fs.symlink(downloaded, input);
+  }
+  const target = path.join(dir, 'installed', 'firepool');
+  const installed = await run(process.execPath, [path.join(input, 'scripts', 'install.mjs'), '--target', target]);
+  assert.equal(JSON.parse(installed.stdout).installed, true);
+  await fs.access(path.join(target, 'scripts', 'firepool.mjs'));
+  const inspected = await run(process.execPath, [path.join(input, 'scripts', 'inspect.mjs')], { env: { ...process.env, FIREPOOL_HOME: path.join(dir, 'empty') } });
+  assert.equal(JSON.parse(inspected.stdout).configured, false);
+});

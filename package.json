@@ -1,5 +1,5 @@
 {
-  "name": "firepool", "version": "0.2.0", "private": true,
+  "name": "firepool", "version": "0.2.1", "private": true,
   "description": "Local account pool management with agent-led setup",
   "type": "module", "license": "MIT", "engines": {"node": ">=22"},
   "bin": {"firepool": "scripts/firepool.mjs"},

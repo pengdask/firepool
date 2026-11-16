@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import http from 'node:http';
+import fs from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { Pool } from '../lib/pool.mjs';
@@ -42,7 +43,7 @@ export async function startConfiguration({ pool = new Pool({ home: process.env.F
   origin = `http://127.0.0.1:${server.address().port}`;
   return { url: `${origin}/#${token}`, close, server };
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(await fs.realpath(process.argv[1])).href) {
   startConfiguration().then(({ url }) => {
     process.stdout.write(`${JSON.stringify({ event: 'local_key_form', url, expiresInSeconds: 600 })}\n`);
     if (process.argv.includes('--open')) {
